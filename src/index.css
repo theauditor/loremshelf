@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 52 15% 90%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 52 15% 96%;
+    --muted-foreground: 52 5% 45%;
+    --accent: 52 15% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 52 15% 85%;
+    --input: 52 15% 85%;
+    --ring: 0 0% 9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 52 15% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 52 15% 15%;
+    --muted-foreground: 52 5% 65%;
+    --accent: 52 15% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 52 15% 15%;
+    --input: 52 15% 15%;
+    --ring: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  /* Automatically apply Malayalam font for Malayalam Unicode characters */
+  * {
+    font-family: 'Instrument Sans', 'Keraleeyam', system-ui, sans-serif;
+  }
+}
+
+/* Define font-face with unicode-range for Malayalam */
+@font-face {
+  font-family: 'MalayalamFallback';
+  src: local('Keraleeyam');
+  unicode-range: U+0D00-0D7F, U+200C-200D, U+25CC;
+}
+
+@layer components {
+  .container {
+    @apply mx-auto max-w-[1440px] px-6 md:px-[67px];
+  }
+
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+}
