@@ -58,15 +58,21 @@ app.use('*', async (req, res) => {
     }
 
     // Render with SSR data fetching (async)
+    console.log('[SERVER] Rendering URL:', url)
     const rendered = await render(url, ssrManifest)
+    console.log('[SERVER] Rendered data keys:', Object.keys(rendered))
+    console.log('[SERVER] Initial data:', JSON.stringify(rendered.initialData || {}).substring(0, 200))
     
     // Inject initial data into the HTML
     const initialDataScript = rendered.initialData 
       ? `<script>window.__INITIAL_DATA__ = ${JSON.stringify(rendered.initialData).replace(/</g, '\\u003c')}</script>`
       : ''
     
+    // Add debug comment
+    const debugComment = `<!-- SSR DEBUG: URL=${url}, hasInitialData=${!!rendered.initialData}, dataKeys=${Object.keys(rendered.initialData || {}).join(',')} -->`
+    
     const html = template
-      .replace(`<!--app-head-->`, `${rendered.head ?? ''}${initialDataScript}`)
+      .replace(`<!--app-head-->`, `${rendered.head ?? ''}${initialDataScript}${debugComment}`)
       .replace(`<!--app-html-->`, rendered.html ?? '')
 
     res.status(200).set({ 'Content-Type': 'text/html' }).send(html)

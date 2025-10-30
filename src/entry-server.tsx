@@ -48,16 +48,16 @@ async function fetchBooks() {
 
     const result = await response.json()
     
-    // Transform API response
+    // Transform API response - use "NULL" for missing data
     return result.data.map((apiBook: any) => ({
-      id: apiBook.custom_slug || apiBook.item_code,
-      title: apiBook.custom_title,
-      author: apiBook.custom_author_alias || 'Unknown Author',
-      description: stripHtml(apiBook.description),
+      id: apiBook.custom_slug || apiBook.item_code || 'NULL',
+      title: apiBook.custom_title || 'NULL',
+      author: apiBook.custom_author_alias || 'NULL',
+      description: stripHtml(apiBook.description) || 'NULL',
       price: apiBook.custom_price_tag || 0,
       image: apiBook.custom_front_cover 
         ? `${API_BASE}${apiBook.custom_front_cover}` 
-        : '',
+        : `${API_BASE}/files/placeholder.png`,
       category: apiBook.custom_genere || 'General',
       genres: apiBook.custom_genere ? [apiBook.custom_genere] : [],
       rating: parseFloat(apiBook.custom_rating) || 0,
@@ -128,19 +128,19 @@ async function fetchBookDetail(slug: string) {
       return tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
     }
 
-    // Transform to Book interface
+    // Transform to Book interface - use "NULL" for missing data
     const book = {
-      id: apiBook.name || apiBook.item_code || apiBook.custom_slug || 'unknown',
-      title: apiBook.custom_title || apiBook.custom_native_title || apiBook.item_name || 'Untitled',
-      author: apiBook.custom_author_alias || apiBook.custom_author || 'Unknown Author',
-      description: stripHtml(apiBook.description || apiBook.custom_about_ || ''),
+      id: apiBook.name || apiBook.item_code || apiBook.custom_slug || 'NULL',
+      title: apiBook.custom_title || apiBook.custom_native_title || apiBook.item_name || 'NULL',
+      author: apiBook.custom_author_alias || apiBook.custom_author || 'NULL',
+      description: stripHtml(apiBook.description || apiBook.custom_about_ || '') || 'NULL',
       price: apiBook.custom_price_tag || apiBook.custom_mrp || 0,
       originalPrice: apiBook.custom_mrp && apiBook.custom_mrp > (apiBook.custom_price_tag || 0) 
         ? apiBook.custom_mrp 
         : undefined,
       image: apiBook.custom_front_cover 
         ? `${API_BASE}${apiBook.custom_front_cover}` 
-        : (apiBook.image ? `${API_BASE}${apiBook.image}` : ''),
+        : (apiBook.image ? `${API_BASE}${apiBook.image}` : `${API_BASE}/files/placeholder.png`),
       category: apiBook.custom_genere || apiBook.item_group || 'General',
       genres: apiBook.custom_genere ? [apiBook.custom_genere] : [],
       rating: parseFloat(apiBook.custom_rating || '0') || 0,
@@ -154,8 +154,16 @@ async function fetchBookDetail(slug: string) {
       awards: apiBook.custom_awards && apiBook.custom_awards !== '0' && apiBook.custom_awards !== 0
         ? [apiBook.custom_awards.toString()] 
         : undefined,
-      isbn: apiBook.custom_isbn || undefined,
+      isbn: apiBook.custom_isbn || 'NULL',
       tags: parseTags(apiBook.custom_tags || null)
+    }
+
+    // Extract Amazon ID - use "NULL" if missing
+    let amazonId = null
+    if (apiBook.custom_amazon_id && apiBook.custom_amazon_id.length > 5) {
+      amazonId = apiBook.custom_amazon_id
+    } else {
+      console.log('SSR: No Amazon ID found for book')
     }
 
     // Fetch author details if available
@@ -173,13 +181,18 @@ async function fetchBookDetail(slug: string) {
         if (authorResponse.ok) {
           const authorResult = await authorResponse.json()
           authorDetails = authorResult.data
+          console.log('SSR: Author details fetched successfully')
+        } else {
+          console.log('SSR: Author API returned non-OK status')
         }
       } catch (authorError) {
         console.error('SSR: Error fetching author details:', authorError)
       }
+    } else {
+      console.log('SSR: No custom_author field found for book')
     }
 
-    return { book, authorDetails }
+    return { book, authorDetails, amazonId }
   } catch (error) {
     console.error('SSR: Error fetching book detail:', error)
     return null
@@ -190,6 +203,11 @@ async function fetchBookDetail(slug: string) {
 export async function render(url: string) {
   let initialData: any = {}
 
+  // Normalize URL to always have a leading slash for React Router
+  const normalizedUrl = url.startsWith('/') ? url : `/${url}`
+
+  console.log(`SSR: Rendering URL: ${url} (normalized: ${normalizedUrl})`)
+
   // Determine route and fetch data accordingly
   if (url === '/' || url === '') {
     console.log('SSR: Fetching data for HomePage')
@@ -198,30 +216,44 @@ export async function render(url: string) {
       latestBooks: books.slice(0, 3),
       loading: false
     }
-  } else if (url.startsWith('/books/')) {
-    const slug = url.replace('/books/', '').split('?')[0]
-    console.log(`SSR: Fetching data for BookDetailPage (${slug})`)
+  } else if (url === '/books' || url === 'books') {
+    console.log('SSR: Fetching data for BooksPage')
+    const books = await fetchBooks()
+    initialData.booksPage = {
+      books: books,
+      loading: false
+    }
+    console.log(`SSR: Fetched ${books.length} books for BooksPage`)
+  } else if (url.startsWith('/books/') || url.startsWith('books/')) {
+    const slug = url.replace('/books/', '').replace('books/', '').split('?')[0]
+    console.log(`SSR: Fetching data for BookDetailPage (slug: ${slug})`)
     const bookData = await fetchBookDetail(slug)
+    console.log(`SSR: Book data fetched:`, bookData ? 'Success' : 'Failed/Null')
     if (bookData) {
       initialData.bookDetailPage = {
         book: bookData.book,
         authorDetails: bookData.authorDetails,
+        amazonId: bookData.amazonId,
         loading: false
       }
+      console.log(`SSR: Book title: ${bookData.book?.title}, Author: ${bookData.authorDetails?.alias || 'N/A'}`)
       // Fetch related books
       const allBooks = await fetchBooks()
       initialData.bookDetailPage.relatedBooks = allBooks
         .filter(b => b.id !== slug)
         .sort(() => Math.random() - 0.5)
         .slice(0, 4)
+      console.log(`SSR: Related books count: ${initialData.bookDetailPage.relatedBooks.length}`)
+    } else {
+      console.error(`SSR: Failed to fetch book data for slug: ${slug}`)
     }
   }
 
-  // Render the app
+  // Render the app with normalized URL
   const html = ReactDOMServer.renderToString(
     <React.StrictMode>
-      <StaticRouter location={url}>
-        <App />
+      <StaticRouter location={normalizedUrl}>
+        <App initialData={initialData} />
       </StaticRouter>
     </React.StrictMode>
   )

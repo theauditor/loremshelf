@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { books as fallbackBooks } from '../data/books'
 import { Book } from '../types'
+import { useSSRData } from '../context/SSRDataContext'
 
 interface APIBook {
   name: string
@@ -37,10 +38,20 @@ export function BooksPage() {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all')
   const [selectedGenre, setSelectedGenre] = useState(searchParams.get('genre') || 'all')
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest')
-  const [books, setBooks] = useState<Book[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // Get SSR data from context
+  const { initialData } = useSSRData()
+  const ssrData = initialData?.booksPage
+  const [books, setBooks] = useState<Book[]>(ssrData?.books || fallbackBooks)
+  const [loading, setLoading] = useState(!ssrData?.books)
 
   useEffect(() => {
+    // Skip fetch if we already have SSR data
+    if (ssrData?.books) {
+      console.log('Using SSR data for BooksPage:', ssrData.books.length, 'books')
+      return
+    }
+
     const fetchBooks = async () => {
       try {
         const params = new URLSearchParams({
@@ -116,7 +127,7 @@ export function BooksPage() {
     }
 
     fetchBooks()
-  }, [])
+  }, [ssrData])
 
   const categories = ['all', ...new Set(books.map(book => book.category))]
   const genres = ['all', ...new Set(books.flatMap(book => book.genres))]

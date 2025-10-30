@@ -4,11 +4,14 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
+// Get initial data from SSR
+const initialData = (window as any).__INITIAL_DATA__ || {}
+
 ReactDOM.hydrateRoot(
   document.getElementById('root')!,
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <App initialData={initialData} />
     </BrowserRouter>
   </React.StrictMode>
 )

@@ -21,10 +21,16 @@ import { CareersPage } from './pages/CareersPage'
 import { ReturnsPage } from './pages/ReturnsPage'
 import { AwardsPage } from './pages/AwardsPage'
 import { CartProvider } from './context/CartContext'
+import { SSRDataProvider } from './context/SSRDataContext'
 
-function App() {
+interface AppProps {
+  initialData?: any
+}
+
+function App({ initialData = {} }: AppProps = {}) {
   return (
-    <CartProvider>
+    <SSRDataProvider initialData={initialData}>
+      <CartProvider>
       <div className="min-h-screen flex flex-col bg-white">
         <ScrollToTop />
         <Header />
@@ -55,6 +61,7 @@ function App() {
         <Footer />
       </div>
     </CartProvider>
+    </SSRDataProvider>
   )
 }
 
