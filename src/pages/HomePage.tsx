@@ -28,6 +28,7 @@ interface APIBook {
   custom_genere: string | null
   custom_rating: string
   description: string | null
+  custom_date_of_publishing: string | null
 }
 
 interface APIResponse {
@@ -64,7 +65,8 @@ export function HomePage() {
             "custom_slug",
             "custom_genere",
             "custom_rating",
-            "description"
+            "description",
+            "custom_date_of_publishing"
           ])
         })
 
@@ -105,14 +107,21 @@ export function HomePage() {
           genres: apiBook.custom_genere ? [apiBook.custom_genere] : [],
           rating: parseFloat(apiBook.custom_rating) || 0,
           reviewCount: 0,
-          releaseDate: new Date().toISOString(),
+          releaseDate: apiBook.custom_date_of_publishing || new Date().toISOString(),
           pages: 0,
           languages: ['English'],
           format: ['Paperback']
         }))
 
-        console.log('Fetched books from API:', transformedBooks)
-        setLatestBooks(transformedBooks.slice(0, 3))
+        // Sort books by publishing date (most recent first)
+        const sortedBooks = transformedBooks.sort((a, b) => {
+          const dateA = new Date(a.releaseDate).getTime()
+          const dateB = new Date(b.releaseDate).getTime()
+          return dateB - dateA // Descending order (newest first)
+        })
+
+        console.log('Fetched books from API (sorted by date):', sortedBooks)
+        setLatestBooks(sortedBooks.slice(0, 3))
       } catch (error) {
         console.error('Error fetching latest releases:', error)
         // Fallback to static books on error
