@@ -22,7 +22,7 @@ export function Footer() {
     ],
     support: [
       { name: 'Contact Us', href: '/contact' },
-      { name: 'Track Order', href: '/track' },
+      // { name: 'Track Order', href: '/track' },
     ],
   }
 

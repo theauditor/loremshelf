@@ -883,11 +883,11 @@ export function CheckoutPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" variant="outline" asChild>
+                {/* <Button size="lg" variant="outline" asChild>
                   <Link to="/track">
                     Track Your Order
                   </Link>
-                </Button>
+                </Button> */}
                 <Button size="lg" asChild>
                   <Link to="/books">
                     Continue Shopping

@@ -34,7 +34,7 @@ export function HelpPage() {
       description: 'Questions about purchasing books, payment methods, and order processing.',
       questions: [
         'What payment methods do you accept?',
-        'How do I track my order?',
+        // 'How do I track my order?',
         'Can I cancel or modify my order?',
         'Do you ship internationally?'
       ]
@@ -205,7 +205,7 @@ export function HelpPage() {
               Quick Solutions
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="hover:shadow-lg transition-shadow">
+              {/* <Card className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 text-center">
                   <Package className="size-8 text-brown-700 mx-auto mb-4" />
                   <h3 className="font-serif text-lg font-medium text-black mb-2">
@@ -218,7 +218,7 @@ export function HelpPage() {
                     <Link to="/track">Track Order</Link>
                   </Button>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               <Card className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 text-center">
