@@ -200,7 +200,7 @@ async function fetchBookDetail(slug: string) {
 }
 
 // Main render function with SSR data fetching
-export async function render(url: string) {
+export async function render(url: string, ssrManifest?: string) {
   let initialData: any = {}
 
   // Normalize URL to always have a leading slash for React Router

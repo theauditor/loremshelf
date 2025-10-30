@@ -93,3 +93,10 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# Vercel
+.vercel
+.vercel/
+
+# Built assets copied to public
+public/assets/
