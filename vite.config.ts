@@ -15,6 +15,11 @@ export default defineConfig({
     outDir: 'dist',
     manifest: true,
     ssrManifest: true,
+    rollupOptions: {
+      input: {
+        main: './index.html'
+      }
+    }
   },
   server: {
     port: 3000,

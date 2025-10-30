@@ -208,6 +208,16 @@ export async function render(url: string, ssrManifest?: string) {
 
   console.log(`SSR: Rendering URL: ${url} (normalized: ${normalizedUrl})`)
 
+  // Parse SSR manifest to get asset paths
+  let manifest: any = {}
+  try {
+    if (ssrManifest) {
+      manifest = typeof ssrManifest === 'string' ? JSON.parse(ssrManifest) : ssrManifest
+    }
+  } catch (e) {
+    console.error('Failed to parse SSR manifest:', e)
+  }
+
   // Determine route and fetch data accordingly
   if (url === '/' || url === '') {
     console.log('SSR: Fetching data for HomePage')
@@ -258,6 +268,30 @@ export async function render(url: string, ssrManifest?: string) {
     </React.StrictMode>
   )
 
-  // Return HTML and initial data
-  return { html, initialData }
+  // Build head section with CSS and JS assets
+  let head = ''
+  
+  // Get entry point from manifest
+  const entryModule = manifest['index.html'] || manifest['src/entry-client.tsx'] || manifest['entry-client.tsx']
+  
+  if (entryModule) {
+    // Add CSS files
+    if (entryModule.css && entryModule.css.length > 0) {
+      entryModule.css.forEach((cssFile: string) => {
+        head += `<link rel="stylesheet" href="/${cssFile}">`
+      })
+    }
+    
+    // Add JS file
+    if (entryModule.file) {
+      head += `<script type="module" crossorigin src="/${entryModule.file}"></script>`
+    }
+  } else {
+    // Fallback: hardcode the asset paths if manifest is not available
+    console.warn('SSR: Manifest entry not found, using fallback asset paths')
+    head = '<link rel="stylesheet" href="/assets/main-TyCgGSRo.css"><script type="module" crossorigin src="/assets/main-Bh4T73Bk.js"></script>'
+  }
+
+  // Return HTML, initial data, and head with assets
+  return { html, initialData, head }
 }
