@@ -183,6 +183,8 @@ export function CheckoutPage() {
       
       const updateOrderAndCleanup = async () => {
         // Step 1: Update Sales Order with payment details ON THE CONFIRMATION PAGE
+        let updateSuccessful = false
+        
         if (orderData.salesOrderId && orderData.paymentSummary) {
           console.log('=== Confirmation Page: Updating Sales Order with Payment Details ===')
           console.log('Order ID:', orderData.salesOrderId)
@@ -199,21 +201,31 @@ export function CheckoutPage() {
               console.log('✓ Sales Order updated successfully with payment details')
               console.log('✓ custom_payment_status = Paid')
               console.log('✓ custom_payment_summary = Full payment session data + metadata')
+              updateSuccessful = true
             } else {
               console.warn('⚠ Failed to update Sales Order:', updateResult.error)
+              console.warn('⚠ Cart will NOT be cleared due to update failure')
             }
           } catch (error) {
             console.error('Error updating sales order on confirmation page:', error)
+            console.warn('⚠ Cart will NOT be cleared due to update error')
           }
         } else {
           console.warn('⚠ Missing orderData.salesOrderId or orderData.paymentSummary')
+          console.warn('⚠ Cart will NOT be cleared')
         }
         
-        // Step 2: Clear cart and saved data
-        clearCart()
-        localStorage.removeItem('loremshelf_form_data')
-        localStorage.removeItem('loremshelf_checkout_step')
-        localStorage.removeItem('loremshelf_customer_data')
+        // Step 2: Clear cart and saved data ONLY if server update was successful
+        if (updateSuccessful) {
+          console.log('✓ Server update successful - Clearing cart and saved data')
+          clearCart()
+          localStorage.removeItem('loremshelf_form_data')
+          localStorage.removeItem('loremshelf_checkout_step')
+          localStorage.removeItem('loremshelf_customer_data')
+        } else {
+          console.warn('⚠ Skipping cart clear - order update did not complete successfully')
+          return // Exit early, don't clear scroll or cleanup
+        }
         
         // Step 3: Ensure body scrolling is re-enabled
         const resetBodyScroll = () => {
@@ -1044,7 +1056,7 @@ export function CheckoutPage() {
 
               <p className="font-sans text-lg text-gray-500 mb-8 leading-relaxed">
                 Thank you for your order! We've received your payment and are preparing your books for shipment.
-                You'll receive a confirmation email with tracking details shortly.
+                You'll receive an email with tracking details when your order is shipped.
               </p>
 
               <div className="bg-white rounded-lg p-6 mb-8 text-left">
@@ -1484,7 +1496,7 @@ export function CheckoutPage() {
                         }
                       }}
                       placeholder="Street address, building, apartment"
-                      maxLength={60}
+                      maxLength={270}
                       className={validationErrors.address ? 'border-red-500' : ''}
                     />
                     {validationErrors.address && (
