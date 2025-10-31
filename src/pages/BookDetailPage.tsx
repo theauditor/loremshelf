@@ -692,22 +692,24 @@ export function BookDetailPage() {
                     <h4 className="font-serif text-xl font-medium text-black mb-4">
                       {authorDetails.alias || book.author}
                     </h4>
-                    <div className="space-y-4 text-gray-700 leading-relaxed whitespace-pre-line">
-                      {authorDetails.about_author || (
-                        <>
-                          <p>
-                            {book.author} is a talented author whose work explores contemporary themes
-                            and social issues. Their writing has been praised for its depth, authenticity,
-                            and ability to connect with readers on a personal level.
-                          </p>
-                          <p>
-                            With a background in literature and a passion for storytelling, {book.author}
-                            brings unique perspectives to their work, making them a distinctive voice
-                            in modern literature.
-                          </p>
-                        </>
-                      )}
-                    </div>
+                    {authorDetails.about_author ? (
+                      <div className="prose prose-gray max-w-none prose-headings:font-serif prose-headings:font-normal prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-base prose-ul:text-gray-700 prose-ol:text-gray-700 prose-li:text-base">
+                        <ReactMarkdown>{authorDetails.about_author}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 text-gray-700 leading-relaxed">
+                        <p>
+                          {book.author} is a talented author whose work explores contemporary themes
+                          and social issues. Their writing has been praised for its depth, authenticity,
+                          and ability to connect with readers on a personal level.
+                        </p>
+                        <p>
+                          With a background in literature and a passion for storytelling, {book.author}
+                          brings unique perspectives to their work, making them a distinctive voice
+                          in modern literature.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

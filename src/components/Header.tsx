@@ -70,11 +70,11 @@ export function Header() {
               </Link>
             </Button>
 
-            {/* Browse Books CTA - Hidden on checkout, books, and book detail pages */}
+            {/* Browse Books CTA - Hidden on checkout, books, and book detail pages, and hidden on mobile */}
             {location.pathname !== '/checkout' && 
              location.pathname !== '/books' && 
              !location.pathname.startsWith('/book/') && (
-              <Button size="sm" asChild>
+              <Button size="sm" className="hidden md:flex" asChild>
                 <Link to="/books">
                   <BookOpen className="size-4 mr-2" />
                   Browse our books

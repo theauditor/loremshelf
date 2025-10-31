@@ -180,12 +180,12 @@ export function HomePage() {
         <div className="container mx-auto px-6 md:px-[67px]">
           <div className="max-w-4xl mx-auto text-center">
             <Badge className="mb-8 bg-brown-700 text-white hover:bg-brown-800">
-              India's First Generation 5 Full-Stack Publishing House
+              India's First Generation 5<br className="sm:hidden" /> Full-Stack Publishing House
             </Badge>
 
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-normal text-black mb-8 leading-tight">
               Transcending Publishing in the{' '}
-              <span className="text-brown-700">AI & Tech Age</span>
+              <span className="text-brown-700"><br/>Digital Age</span>
             </h1>
 
             <p className="font-sans text-lg md:text-xl text-gray-500 mb-12 max-w-3xl mx-auto leading-relaxed">

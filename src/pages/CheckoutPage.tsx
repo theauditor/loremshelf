@@ -169,6 +169,11 @@ export function CheckoutPage() {
       localStorage.removeItem('loremshelf_customer_data')
       // Scroll to top of page to show success message
       window.scrollTo({ top: 0, behavior: 'smooth' })
+      // Ensure body scrolling is re-enabled (in case Razorpay or other modals disabled it)
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+      document.body.style.height = ''
     }
   }, [step, clearCart])
 
@@ -1089,11 +1094,12 @@ export function CheckoutPage() {
                   })}
                 </div>
 
-                <div className="mt-8 flex justify-between items-center">
-                  <Button variant="outline" asChild>
-                    <Link to="/books">Continue Shopping</Link>
-                  </Button>
-                  <Button type="button" onClick={() => setStep('shipping')}>
+                {/* Desktop: Buttons at bottom of left column */}
+                <div className="mt-8 hidden lg:flex justify-end">
+                  <Button type="button" onClick={() => {
+                    setStep('shipping')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}>
                     Proceed to Checkout
                     <ArrowRight className="ml-2 size-4" />
                   </Button>
@@ -1105,6 +1111,17 @@ export function CheckoutPage() {
                   <OrderSummary />
                 </div>
               </div>
+            </div>
+
+            {/* Mobile: Buttons below Order Summary */}
+            <div className="mt-8 flex lg:hidden justify-stretch">
+              <Button type="button" size="lg" className="w-full" onClick={() => {
+                setStep('shipping')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}>
+                Proceed to Checkout
+                <ArrowRight className="ml-2 size-4" />
+              </Button>
             </div>
           </div>
         </section>
@@ -1119,7 +1136,10 @@ export function CheckoutPage() {
         <section className="section-padding bg-cream-100">
           <div className="container mx-auto px-6 md:px-[67px]">
             <div className="flex items-center gap-4 mb-8">
-              <Button variant="ghost" size="sm" onClick={() => setStep('cart')}>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setStep('cart')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}>
                 <ArrowLeft className="size-4 mr-2" />
                 Back to Cart
               </Button>
@@ -1263,11 +1283,18 @@ export function CheckoutPage() {
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                    <Button type="button" variant="outline" onClick={() => setStep('cart')}>
+                  {/* Desktop: Buttons at bottom of left column */}
+                  <div className="hidden lg:flex flex-col sm:flex-row gap-4 pt-6">
+                    <Button type="button" variant="outline" onClick={() => {
+                      setStep('cart')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}>
                       Back to Cart
                     </Button>
-                    <Button type="button" onClick={() => setStep('payment')}>
+                    <Button type="button" onClick={() => {
+                      setStep('payment')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}>
                       Continue to Payment
                       <ArrowRight className="ml-2 size-4" />
                     </Button>
@@ -1297,6 +1324,23 @@ export function CheckoutPage() {
                 </div>
               </div>
             </div>
+
+            {/* Mobile: Buttons below Order Summary */}
+            <div className="flex lg:hidden flex-col gap-4 pt-6">
+              <Button type="button" size="lg" onClick={() => {
+                setStep('payment')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}>
+                Continue to Payment
+                <ArrowRight className="ml-2 size-4" />
+              </Button>
+              <Button type="button" variant="outline" onClick={() => {
+                setStep('cart')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}>
+                Back to Cart
+              </Button>
+            </div>
           </div>
         </section>
       </div>
@@ -1309,7 +1353,10 @@ export function CheckoutPage() {
       <section className="section-padding bg-cream-100">
         <div className="container mx-auto px-6 md:px-[67px]">
           <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="sm" onClick={() => setStep('shipping')}>
+            <Button variant="ghost" size="sm" onClick={() => {
+              setStep('shipping')
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}>
               <ArrowLeft className="size-4 mr-2" />
               Back to Shipping
             </Button>
@@ -1459,11 +1506,15 @@ export function CheckoutPage() {
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                  {/* Desktop: Buttons inside card */}
+                  <div className="hidden lg:flex flex-col sm:flex-row gap-4 pt-6">
                     <Button 
                       type="button"
                       variant="outline" 
-                      onClick={() => setStep('shipping')} 
+                      onClick={() => {
+                        setStep('shipping')
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }} 
                       className="flex-1"
                       disabled={isSubmitting}
                     >
@@ -1499,6 +1550,42 @@ export function CheckoutPage() {
                 <OrderSummary />
               </div>
             </div>
+          </div>
+
+          {/* Mobile: Buttons below Order Summary */}
+          <div className="flex lg:hidden flex-col gap-4 pt-6">
+            <Button 
+              type="button"
+              onClick={handleSubmitOrder} 
+              size="lg" 
+              className="w-full bg-black hover:bg-gray-800"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin size-4 mr-2 border-2 border-white border-t-transparent rounded-full" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Lock className="size-4 mr-2" />
+                  Place Order — ₹{total}
+                </>
+              )}
+            </Button>
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => {
+                setStep('shipping')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }} 
+              className="w-full"
+              disabled={isSubmitting}
+            >
+              <ArrowLeft className="size-4 mr-2" />
+              Back to Shipping
+            </Button>
           </div>
         </div>
       </section>
