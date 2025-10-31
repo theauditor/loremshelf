@@ -43,16 +43,11 @@ export function Footer() {
             <div className="lg:col-span-2">
               <Link
                 to="/"
-                className="flex items-center gap-4 mb-8 hover:opacity-80 transition-opacity"
+                className="flex items-center mb-8 hover:opacity-80 transition-opacity"
               >
-                <div className="size-6">
-                  <svg className="block size-full" fill="none" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" fill="black" r="12" />
-                  </svg>
+                <div className="h-8 md:h-10">
+                  <img src="/White.svg" alt="Lorem" className="block h-full w-auto" />
                 </div>
-                <span className="font-serif text-[20px] md:text-[24px] text-white font-medium">
-                  Lorem
-                </span>
               </Link>
 
               <div className="space-y-4 max-w-md">

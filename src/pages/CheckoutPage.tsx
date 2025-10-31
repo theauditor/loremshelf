@@ -167,6 +167,8 @@ export function CheckoutPage() {
       localStorage.removeItem('loremshelf_form_data')
       localStorage.removeItem('loremshelf_checkout_step')
       localStorage.removeItem('loremshelf_customer_data')
+      // Scroll to top of page to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [step, clearCart])
 

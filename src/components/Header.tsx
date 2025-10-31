@@ -31,16 +31,11 @@ export function Header() {
           {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-3 md:gap-4 hover:opacity-80 transition-opacity"
+            className="flex items-center hover:opacity-80 transition-opacity"
           >
-            <div className="size-6 md:size-8">
-              <svg className="block size-full" fill="none" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" fill="black" r="12" />
-              </svg>
+            <div className="h-[27px] md:h-[34px]">
+              <img src="/Black.svg" alt="Lorem" className="block h-full w-auto" />
             </div>
-            <span className="font-serif text-[20px] md:text-[24px] text-black font-medium">
-              Lorem
-            </span>
           </Link>
 
           {/* Navigation */}
