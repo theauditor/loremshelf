@@ -29,7 +29,8 @@ async function fetchBooks() {
         "custom_slug",
         "custom_genere",
         "custom_rating",
-        "description"
+        "description",
+        "custom_date_of_publication"
       ])
     })
 
@@ -62,7 +63,7 @@ async function fetchBooks() {
       genres: apiBook.custom_genere ? [apiBook.custom_genere] : [],
       rating: parseFloat(apiBook.custom_rating) || 0,
       reviewCount: 0,
-      releaseDate: new Date().toISOString(),
+      releaseDate: apiBook.custom_date_of_publication || new Date().toISOString(),
       pages: 0,
       languages: ['English'],
       format: ['Paperback']
@@ -222,8 +223,14 @@ export async function render(url: string, ssrManifest?: string) {
   if (url === '/' || url === '') {
     console.log('SSR: Fetching data for HomePage')
     const books = await fetchBooks()
+    // Sort books by publishing date (most recent first)
+    const sortedBooks = books.sort((a, b) => {
+      const dateA = new Date(a.releaseDate).getTime()
+      const dateB = new Date(b.releaseDate).getTime()
+      return dateB - dateA // Descending order (newest first)
+    })
     initialData.homePage = {
-      latestBooks: books.slice(0, 3),
+      latestBooks: sortedBooks.slice(0, 3),
       loading: false
     }
   } else if (url === '/books' || url === 'books') {

@@ -26,6 +26,7 @@ interface APIBook {
   custom_genere: string | null
   custom_rating: string
   description: string | null
+  custom_date_of_publication: string | null
 }
 
 interface APIResponse {
@@ -66,7 +67,8 @@ export function BooksPage() {
             "custom_slug",
             "custom_genere",
             "custom_rating",
-            "description"
+            "description",
+            "custom_date_of_publication"
           ])
         })
 
@@ -108,7 +110,7 @@ export function BooksPage() {
           genres: apiBook.custom_genere ? [apiBook.custom_genere] : [],
           rating: parseFloat(apiBook.custom_rating) || 0,
           reviewCount: 0,
-          releaseDate: new Date().toISOString(),
+          releaseDate: apiBook.custom_date_of_publication || new Date().toISOString(),
           pages: 0,
           languages: ['English'],
           format: ['Paperback']

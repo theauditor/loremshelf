@@ -602,11 +602,11 @@ export function BookDetailPage() {
         <div className="container mx-auto px-6 md:px-[67px]">
           <div className="max-w-4xl mx-auto">
             {/* About Section */}
-            <div className="prose prose-lg max-w-none">
+            <div className="max-w-none">
               <h2 className="font-serif text-2xl font-normal text-black mb-6">
                 About This Book
               </h2>
-              <div className="space-y-6 text-gray-700 leading-relaxed">
+              <div className="space-y-6 text-gray-700 leading-relaxed text-base">
                 <p>
                   {book.description}
                 </p>
