@@ -1,18 +1,10 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/client",
+  "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
-      "source": "/:file(.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.webp)",
-      "destination": "/:file"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/api/render"
+      "destination": "/index.html"
     }
   ]
 }
