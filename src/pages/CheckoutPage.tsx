@@ -180,13 +180,44 @@ export function CheckoutPage() {
       localStorage.removeItem('loremshelf_form_data')
       localStorage.removeItem('loremshelf_checkout_step')
       localStorage.removeItem('loremshelf_customer_data')
-      // Scroll to top of page to show success message
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      
       // Ensure body scrolling is re-enabled (in case Razorpay or other modals disabled it)
-      document.body.style.overflow = ''
-      document.body.style.position = ''
-      document.body.style.width = ''
-      document.body.style.height = ''
+      // Use multiple timeouts to ensure Razorpay has fully closed and released its scroll lock
+      const resetBodyScroll = () => {
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.width = ''
+        document.body.style.height = ''
+        document.body.style.top = ''
+        document.body.style.left = ''
+        
+        // Also check for any Razorpay backdrop divs and remove them
+        const razorpayBackdrops = document.querySelectorAll('.razorpay-container, [class*="razorpay"]')
+        razorpayBackdrops.forEach(el => {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el)
+          }
+        })
+      }
+      
+      // Reset immediately
+      resetBodyScroll()
+      
+      // Reset again after a delay to ensure Razorpay has fully cleaned up
+      const timeout1 = setTimeout(resetBodyScroll, 100)
+      const timeout2 = setTimeout(resetBodyScroll, 300)
+      const timeout3 = setTimeout(resetBodyScroll, 500)
+      
+      // Scroll to top of page to show success message (after body scroll is enabled)
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 100)
+      
+      return () => {
+        clearTimeout(timeout1)
+        clearTimeout(timeout2)
+        clearTimeout(timeout3)
+      }
     }
   }, [step, clearCart])
 
