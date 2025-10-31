@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -90,6 +90,9 @@ const INDIAN_STATES = [
 ]
 
 export function CheckoutPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  
   // Load saved data from localStorage on mount
   const [step, setStep] = useState<CheckoutStep>(() => {
     const savedStep = localStorage.getItem('loremshelf_checkout_step')
@@ -142,6 +145,24 @@ export function CheckoutPage() {
   const subtotal = cartState.total
   const total = subtotal + shipping
 
+  // Sync step with URL on initial load
+  useEffect(() => {
+    const pathSegments = location.pathname.split('/')
+    const urlStep = pathSegments[pathSegments.length - 1]
+    
+    // Only sync if URL contains a valid step
+    if (['cart', 'shipping', 'payment', 'confirmation'].includes(urlStep)) {
+      // Prefer URL step over saved step
+      if (urlStep !== step) {
+        setStep(urlStep as CheckoutStep)
+      }
+    } else {
+      // If URL doesn't have a step, navigate to current step
+      navigate(`/checkout/${step}`, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount - intentionally ignoring dependencies
+
   // Save form data to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('loremshelf_form_data', JSON.stringify(formData))
@@ -151,6 +172,23 @@ export function CheckoutPage() {
   useEffect(() => {
     localStorage.setItem('loremshelf_checkout_step', step)
   }, [step])
+
+  // Update URL whenever step changes
+  useEffect(() => {
+    const currentPath = location.pathname
+    const expectedPath = `/checkout/${step}`
+    
+    // Only update if URL doesn't match current step
+    if (!currentPath.endsWith(`/${step}`)) {
+      // Use replace for confirmation to avoid back button issues
+      // Use push for other steps to allow proper back navigation
+      if (step === 'confirmation') {
+        navigate(expectedPath, { replace: true })
+      } else {
+        navigate(expectedPath, { replace: false })
+      }
+    }
+  }, [step, navigate, location.pathname])
 
   // Save customer data to localStorage whenever it changes
   useEffect(() => {
@@ -187,37 +225,43 @@ export function CheckoutPage() {
     }
   }, [cartState.items.length, step])
 
-  // Prevent browser back button navigation during checkout process
+  // Handle browser back/forward navigation
   useEffect(() => {
-    if (step === 'payment' || isSubmitting) {
-      // Push a dummy state to prevent accidental back navigation
-      const handlePopState = (e: PopStateEvent) => {
-        if (isSubmitting) {
-          console.log('=== Preventing navigation during payment processing ===')
-          e.preventDefault()
-          window.history.pushState(null, '', window.location.href)
-          return
-        }
-        if (step === 'payment') {
-          console.log('=== User tried to navigate back from payment, asking confirmation ===')
-          const confirmLeave = window.confirm('Are you sure you want to leave the payment page? Your order will not be completed.')
-          if (!confirmLeave) {
-            window.history.pushState(null, '', window.location.href)
-          } else {
-            setStep('shipping')
-          }
-        }
+    const handlePopState = () => {
+      // Read step from URL after navigation
+      const pathSegments = location.pathname.split('/')
+      const urlStep = pathSegments[pathSegments.length - 1] as CheckoutStep
+      
+      // Prevent navigation away from payment during submission
+      if (isSubmitting) {
+        console.log('=== Preventing navigation during payment processing ===')
+        navigate(`/checkout/payment`, { replace: true })
+        return
       }
-
-      // Push current state to history to catch back button
-      window.history.pushState(null, '', window.location.href)
-      window.addEventListener('popstate', handlePopState)
-
-      return () => {
-        window.removeEventListener('popstate', handlePopState)
+      
+      // Warn user when leaving payment page via back button
+      if (step === 'payment' && urlStep !== 'payment') {
+        console.log('=== User tried to navigate back from payment ===')
+        const confirmLeave = window.confirm('Are you sure you want to leave the payment page? Your order will not be completed.')
+        if (!confirmLeave) {
+          // Stay on payment page
+          navigate('/checkout/payment', { replace: true })
+        } else {
+          // Allow navigation back to shipping
+          setStep('shipping')
+        }
+      } else if (['cart', 'shipping', 'payment', 'confirmation'].includes(urlStep)) {
+        // Normal navigation - sync step with URL
+        setStep(urlStep)
       }
     }
-  }, [step, isSubmitting])
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [step, isSubmitting, navigate, location.pathname])
 
   // Fetch custom front covers from API for all cart items in a SINGLE REQUEST
   // This is optimized to avoid multiple API calls - uses SQL "IN" operator to fetch all items at once

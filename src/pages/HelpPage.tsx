@@ -68,7 +68,7 @@ export function HelpPage() {
       icon: Mail,
       title: 'Email Support',
       description: 'Get help via email',
-      contact: 'hello@lorem.com',
+      contact: 'hi@lorempress.co',
       availability: '24-48 hour response'
     },
     {
@@ -257,7 +257,7 @@ export function HelpPage() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-brown-800" asChild>
-                <a href="mailto:hello@lorem.com">
+                <a href="mailto:hi@lorempress.co">
                   Email Us
                 </a>
               </Button>

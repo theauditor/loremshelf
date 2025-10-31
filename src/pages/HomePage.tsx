@@ -472,7 +472,7 @@ export function HomePage() {
               </Button>
 
               <Button size="lg" variant="outline" asChild className="text-base px-8 py-4 border-white text-white hover:bg-white hover:text-brown-800">
-                <a href="mailto:hello@lorem.com">
+                <a href="mailto:hi@lorempress.co">
                   Get in Touch
                 </a>
               </Button>
@@ -480,8 +480,8 @@ export function HomePage() {
 
             <div className="mt-8 text-sm opacity-75">
               <p>Questions? Reach out to us at{' '}
-                <a href="mailto:hello@lorem.com" className="underline hover:no-underline">
-                  hello@lorem.com
+                <a href="mailto:hi@lorempress.co" className="underline hover:no-underline">
+                  hi@lorempress.co
                 </a>
               </p>
             </div>

@@ -186,10 +186,10 @@ export function ContactPage() {
                   Email Us
                 </h3>
                 <a
-                  href="mailto:hello@lorem.com"
+                  href="mailto:hi@lorempress.co"
                   className="font-sans text-brown-700 hover:underline"
                 >
-                  hello@lorem.com
+                  hi@lorempress.co
                 </a>
               </CardContent>
             </Card>

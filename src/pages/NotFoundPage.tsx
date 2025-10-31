@@ -51,7 +51,7 @@ export function NotFoundPage() {
               Browse All Books
             </Link>
             <span className="hidden sm:inline text-gray-300">•</span>
-            <a href="mailto:hello@lorem.com" className="font-sans text-purple hover:underline">
+            <a href="mailto:hi@lorempress.co" className="font-sans text-purple hover:underline">
               Get Help
             </a>
           </div>
