@@ -408,7 +408,7 @@ export function CheckoutPage() {
 
     // Razorpay options
     const options = {
-      key: 'rzp_test_RZPCiwMvvYJLJH', // Razorpay test key
+      key: 'rzp_live_RZt4oM6p1Ge3fb', // Razorpay live key
       amount: total * 100, // Amount in paise (multiply by 100)
       currency: 'INR',
       name: 'Lorem Publishing',

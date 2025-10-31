@@ -13,18 +13,8 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'dist',
-    manifest: true,
-    ssrManifest: true,
-    rollupOptions: {
-      input: {
-        main: './index.html'
-      }
-    }
   },
   server: {
     port: 3000,
-  },
-  ssr: {
-    noExternal: ['react-router-dom'],
   },
 })

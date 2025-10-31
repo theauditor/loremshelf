@@ -4,14 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
-// Get initial data from SSR
-const initialData = (window as any).__INITIAL_DATA__ || {}
-
-ReactDOM.hydrateRoot(
-  document.getElementById('root')!,
+// Pure client-side rendering (no SSR)
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App initialData={initialData} />
+      <App />
     </BrowserRouter>
   </React.StrictMode>
 )

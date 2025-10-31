@@ -19,6 +19,7 @@ import { testimonials } from '../data/testimonials'
 import { useCart } from '../context/CartContext'
 import { cn } from '../lib/utils'
 import { Book } from '../types'
+import ReactMarkdown from 'react-markdown'
 
 interface APIBook {
   name: string
@@ -82,6 +83,7 @@ export function BookDetailPage() {
   const [relatedBooks, setRelatedBooks] = useState<Book[]>(ssrData?.relatedBooks || [])
   const [authorDetails, setAuthorDetails] = useState<any>(ssrData?.authorDetails || null)
   const [amazonId, setAmazonId] = useState<string | null>(ssrData?.amazonId || null)
+  const [aboutMarkdown, setAboutMarkdown] = useState<string | null>(ssrData?.aboutMarkdown || null)
   const [loading, setLoading] = useState(!ssrData)
   const { addItem } = useCart()
 
@@ -173,7 +175,7 @@ export function BookDetailPage() {
             id: apiBook.name || apiBook.item_code || apiBook.custom_slug || 'unknown',
             title: apiBook.custom_title || apiBook.custom_native_title || apiBook.item_name || 'Untitled',
             author: apiBook.custom_author_alias || apiBook.custom_author || 'Unknown Author',
-            description: stripHtml(apiBook.description || null) || stripHtml(apiBook.custom_about_ || null) || '',
+            description: stripHtml(apiBook.description || null) || '',
             price: apiBook.custom_price_tag || apiBook.custom_mrp || 0,
             originalPrice: apiBook.custom_mrp && apiBook.custom_mrp > (apiBook.custom_price_tag || 0) 
               ? apiBook.custom_mrp 
@@ -200,6 +202,11 @@ export function BookDetailPage() {
 
           console.log('Transformed book:', transformedBook)
           setBook(transformedBook)
+
+          // Store the raw markdown from custom_about_ for the About section
+          if (apiBook.custom_about_) {
+            setAboutMarkdown(apiBook.custom_about_)
+          }
 
           // Store Amazon ID if available and valid
           if (apiBook.custom_amazon_id && apiBook.custom_amazon_id.length > 5) {
@@ -606,26 +613,32 @@ export function BookDetailPage() {
               <h2 className="font-serif text-2xl font-normal text-black mb-6">
                 About This Book
               </h2>
-              <div className="space-y-6 text-gray-700 leading-relaxed text-base">
-                <p>
-                  {book.description}
-                </p>
-                {book.genres.length > 0 && (
-                <p>
-                  This compelling narrative explores themes of {book.genres.join(', ').toLowerCase()},
-                  offering readers a thought-provoking journey through contemporary issues
-                  that resonate with our rapidly changing world.
-                </p>
-                )}
-                {(book.languages.length > 0 || book.format.length > 0) && (
-                <p>
-                    Available in {book.languages.join(', ')} 
-                    {book.format.length > 0 && ` in ${book.format.join(', ')} format`}.
-                    This book has been carefully crafted to reach readers,
-                  breaking down barriers of language and accessibility.
-                </p>
-                )}
-              </div>
+              {aboutMarkdown ? (
+                <div className="prose prose-gray max-w-none prose-headings:font-serif prose-headings:font-normal prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-base prose-ul:text-gray-700 prose-ol:text-gray-700 prose-li:text-base">
+                  <ReactMarkdown>{aboutMarkdown}</ReactMarkdown>
+                </div>
+              ) : (
+                <div className="space-y-6 text-gray-700 leading-relaxed text-base">
+                  <p>
+                    {book.description}
+                  </p>
+                  {book.genres.length > 0 && (
+                  <p>
+                    This compelling narrative explores themes of {book.genres.join(', ').toLowerCase()},
+                    offering readers a thought-provoking journey through contemporary issues
+                    that resonate with our rapidly changing world.
+                  </p>
+                  )}
+                  {(book.languages.length > 0 || book.format.length > 0) && (
+                  <p>
+                      Available in {book.languages.join(', ')} 
+                      {book.format.length > 0 && ` in ${book.format.join(', ')} format`}.
+                      This book has been carefully crafted to reach readers,
+                    breaking down barriers of language and accessibility.
+                  </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Key Themes */}
@@ -752,7 +765,7 @@ export function BookDetailPage() {
               <h2 className="font-serif text-3xl font-normal text-black mb-4">
                 Readers Also Enjoyed
               </h2>
-              <p className="font-sans text-gray-500">
+              <p className="font-sans text-lg text-gray-500">
                 Discover more books in similar genres and themes
               </p>
             </div>

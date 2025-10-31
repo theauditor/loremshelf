@@ -410,8 +410,8 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="section-padding bg-cream-50">
+      {/* Testimonials Section - Hidden */}
+      {/* <section className="section-padding bg-cream-50">
         <div className="container mx-auto px-6 md:px-[67px]">
           <div className="text-center mb-16">
             <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-normal text-black mb-6">
@@ -447,7 +447,7 @@ export function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
 
       {/* CTA Section */}

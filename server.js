@@ -9,14 +9,6 @@ const isProduction = process.env.NODE_ENV === 'production'
 const port = process.env.PORT || 3000
 const base = process.env.BASE || '/'
 
-// Cached production assets
-const templateHtml = isProduction
-  ? fs.readFileSync('./dist/client/index.html', 'utf-8')
-  : ''
-const ssrManifest = isProduction
-  ? fs.readFileSync('./dist/client/.vite/ssr-manifest.json', 'utf-8')
-  : undefined
-
 // Create http server
 const app = express()
 
@@ -26,7 +18,7 @@ if (!isProduction) {
   const { createServer } = await import('vite')
   vite = await createServer({
     server: { middlewareMode: true },
-    appType: 'custom',
+    appType: 'spa',
     base
   })
   app.use(vite.middlewares)
@@ -34,16 +26,15 @@ if (!isProduction) {
   const compression = (await import('compression')).default
   const sirv = (await import('sirv')).default
   app.use(compression())
-  app.use(base, sirv('./dist/client', { extensions: [] }))
+  app.use(base, sirv('./dist', { extensions: [], single: true }))
 }
 
-// Serve HTML
-app.use('*', async (req, res) => {
+// Serve HTML for all routes (SPA mode)
+app.use('*', async (req, res, next) => {
   try {
     const url = req.originalUrl.replace(base, '')
 
     let template
-    let render
     if (!isProduction) {
       // Always read fresh template in development
       template = fs.readFileSync(
@@ -51,31 +42,11 @@ app.use('*', async (req, res) => {
         'utf-8',
       )
       template = await vite.transformIndexHtml(url, template)
-      render = (await vite.ssrLoadModule('/src/entry-server.tsx')).render
     } else {
-      template = templateHtml
-      render = (await import('./dist/server/entry-server.js')).render
+      template = fs.readFileSync('./dist/index.html', 'utf-8')
     }
 
-    // Render with SSR data fetching (async)
-    console.log('[SERVER] Rendering URL:', url)
-    const rendered = await render(url, ssrManifest)
-    console.log('[SERVER] Rendered data keys:', Object.keys(rendered))
-    console.log('[SERVER] Initial data:', JSON.stringify(rendered.initialData || {}).substring(0, 200))
-    
-    // Inject initial data into the HTML
-    const initialDataScript = rendered.initialData 
-      ? `<script>window.__INITIAL_DATA__ = ${JSON.stringify(rendered.initialData).replace(/</g, '\\u003c')}</script>`
-      : ''
-    
-    // Add debug comment
-    const debugComment = `<!-- SSR DEBUG: URL=${url}, hasInitialData=${!!rendered.initialData}, dataKeys=${Object.keys(rendered.initialData || {}).join(',')} -->`
-    
-    const html = template
-      .replace(`<!--app-head-->`, `${rendered.head ?? ''}${initialDataScript}${debugComment}`)
-      .replace(`<!--app-html-->`, rendered.html ?? '')
-
-    res.status(200).set({ 'Content-Type': 'text/html' }).send(html)
+    res.status(200).set({ 'Content-Type': 'text/html' }).send(template)
   } catch (e) {
     vite?.ssrFixStacktrace(e)
     console.log(e.stack)

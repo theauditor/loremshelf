@@ -27,9 +27,9 @@ interface AppProps {
   initialData?: any
 }
 
-function App({ initialData = {} }: AppProps = {}) {
+function App({ initialData }: AppProps = { initialData: {} }) {
   return (
-    <SSRDataProvider initialData={initialData}>
+    <SSRDataProvider initialData={initialData || {}}>
       <CartProvider>
       <div className="min-h-screen flex flex-col bg-white">
         <ScrollToTop />
