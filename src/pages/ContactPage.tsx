@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Send,
   AlertCircle,
-  Loader2
+  Loader2,
+  MessageCircle
 } from 'lucide-react'
 
 export function ContactPage() {
@@ -169,6 +170,22 @@ export function ContactPage() {
             <p className="font-sans text-lg md:text-xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
               Have a question or need assistance? We're here to help. Fill out the form below and our team will get back to you as soon as possible.
             </p>
+            <div className="mt-8">
+              <Button
+                asChild
+                size="lg"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <a
+                  href="https://wa.me/919995683304"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="size-5 mr-2" />
+                  Chat on WhatsApp
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -206,7 +223,7 @@ export function ContactPage() {
                   href="tel:+919876543210"
                   className="font-sans text-brown-700 hover:underline"
                 >
-                  +91 98765 43210
+                  +91 99956 83304
                 </a>
               </CardContent>
             </Card>

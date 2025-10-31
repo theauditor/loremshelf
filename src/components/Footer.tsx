@@ -179,7 +179,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Social Links */}
+          {/* Social Links - hidden
           <div className="flex items-center justify-center gap-6 mb-12">
             {socialLinks.map((social) => (
               <a
@@ -194,6 +194,7 @@ export function Footer() {
               </a>
             ))}
           </div>
+          */}
 
           <Separator className="mb-8" />
 
