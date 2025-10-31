@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -30,10 +30,10 @@ import { useCart } from '../context/CartContext'
 import { books } from '../data/books'
 import { parseERPNextError, ParsedError } from '../lib/erpnext-error-handler'
 
-// Razorpay types
+// Cashfree types
 declare global {
   interface Window {
-    Razorpay: any
+    Cashfree: any
   }
 }
 
@@ -121,6 +121,7 @@ export function CheckoutPage() {
     deliveryDate?: string
     orderTotal?: number
     orderItems?: typeof cartItemsWithDetails
+    paymentSummary?: any
   } | null>(null)
   const [savedCustomerData, setSavedCustomerData] = useState<{
     customerName: string
@@ -145,6 +146,9 @@ export function CheckoutPage() {
     }
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  
+  // Track if confirmation cleanup has been run to prevent repeated executions
+  const confirmationCleanupRan = useRef(false)
 
   const shipping = 0 // Free shipping for all orders
   const subtotal = cartState.total
@@ -172,54 +176,91 @@ export function CheckoutPage() {
     }
   }, [savedCustomerData])
 
-  // Clear cart and saved data when order is confirmed
+  // Update order status and clear cart when order is confirmed
   useEffect(() => {
-    if (step === 'confirmation') {
-      clearCart()
-      // Clear all saved checkout data from localStorage
-      localStorage.removeItem('loremshelf_form_data')
-      localStorage.removeItem('loremshelf_checkout_step')
-      localStorage.removeItem('loremshelf_customer_data')
+    if (step === 'confirmation' && orderData && !confirmationCleanupRan.current) {
+      confirmationCleanupRan.current = true // Mark as run to prevent repeated executions
       
-      // Ensure body scrolling is re-enabled (in case Razorpay or other modals disabled it)
-      // Use multiple timeouts to ensure Razorpay has fully closed and released its scroll lock
-      const resetBodyScroll = () => {
-        document.body.style.overflow = ''
-        document.body.style.position = ''
-        document.body.style.width = ''
-        document.body.style.height = ''
-        document.body.style.top = ''
-        document.body.style.left = ''
-        
-        // Also check for any Razorpay backdrop divs and remove them
-        const razorpayBackdrops = document.querySelectorAll('.razorpay-container, [class*="razorpay"]')
-        razorpayBackdrops.forEach(el => {
-          if (el.parentNode) {
-            el.parentNode.removeChild(el)
+      const updateOrderAndCleanup = async () => {
+        // Step 1: Update Sales Order with payment details ON THE CONFIRMATION PAGE
+        if (orderData.salesOrderId && orderData.paymentSummary) {
+          console.log('=== Confirmation Page: Updating Sales Order with Payment Details ===')
+          console.log('Order ID:', orderData.salesOrderId)
+          console.log('Setting custom_payment_status to: Paid')
+          console.log('Payment Summary includes full payment session data:', orderData.paymentSummary)
+          
+          try {
+            const updateResult = await updateSalesOrderWithPayment(
+              orderData.salesOrderId,
+              orderData.paymentSummary
+            )
+            
+            if (updateResult.success) {
+              console.log('✓ Sales Order updated successfully with payment details')
+              console.log('✓ custom_payment_status = Paid')
+              console.log('✓ custom_payment_summary = Full payment session data + metadata')
+            } else {
+              console.warn('⚠ Failed to update Sales Order:', updateResult.error)
+            }
+          } catch (error) {
+            console.error('Error updating sales order on confirmation page:', error)
           }
-        })
+        } else {
+          console.warn('⚠ Missing orderData.salesOrderId or orderData.paymentSummary')
+        }
+        
+        // Step 2: Clear cart and saved data
+        clearCart()
+        localStorage.removeItem('loremshelf_form_data')
+        localStorage.removeItem('loremshelf_checkout_step')
+        localStorage.removeItem('loremshelf_customer_data')
+        
+        // Step 3: Ensure body scrolling is re-enabled
+        const resetBodyScroll = () => {
+          document.body.style.overflow = ''
+          document.body.style.position = ''
+          document.body.style.width = ''
+          document.body.style.height = ''
+          document.body.style.top = ''
+          document.body.style.left = ''
+          
+          // Remove any Cashfree backdrop divs
+          const cashfreeBackdrops = document.querySelectorAll('.cashfree-container, [class*="cashfree"]')
+          cashfreeBackdrops.forEach(el => {
+            if (el.parentNode) {
+              el.parentNode.removeChild(el)
+            }
+          })
+        }
+        
+        // Reset immediately
+        resetBodyScroll()
+        
+        // Reset again after delays to ensure Cashfree has fully cleaned up
+        const timeout1 = setTimeout(resetBodyScroll, 100)
+        const timeout2 = setTimeout(resetBodyScroll, 300)
+        const timeout3 = setTimeout(resetBodyScroll, 500)
+        
+        // Scroll to top of page to show success message (only once!)
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }, 100)
+        
+        return () => {
+          clearTimeout(timeout1)
+          clearTimeout(timeout2)
+          clearTimeout(timeout3)
+        }
       }
       
-      // Reset immediately
-      resetBodyScroll()
-      
-      // Reset again after a delay to ensure Razorpay has fully cleaned up
-      const timeout1 = setTimeout(resetBodyScroll, 100)
-      const timeout2 = setTimeout(resetBodyScroll, 300)
-      const timeout3 = setTimeout(resetBodyScroll, 500)
-      
-      // Scroll to top of page to show success message (after body scroll is enabled)
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      }, 100)
-      
-      return () => {
-        clearTimeout(timeout1)
-        clearTimeout(timeout2)
-        clearTimeout(timeout3)
-      }
+      updateOrderAndCleanup()
     }
-  }, [step, clearCart])
+    
+    // Reset the ref when leaving confirmation page
+    if (step !== 'confirmation') {
+      confirmationCleanupRan.current = false
+    }
+  }, [step, orderData, clearCart])
 
   // Reset to cart step if cart is empty (but not on confirmation page)
   useEffect(() => {
@@ -417,13 +458,11 @@ export function CheckoutPage() {
     return `+91${phone}`
   }
 
-  // Create Sales Order after successful payment
+  // Create Sales Order BEFORE payment (to get order ID)
   const createSalesOrder = async (
     customerName: string,
     customerId: string,
     addressId: string,
-    paymentId: string,
-    paymentStatus: string,
     shippingDetails: {
       address: string
       landmark: string
@@ -435,7 +474,7 @@ export function CheckoutPage() {
     }
   ) => {
     try {
-      console.log('=== Creating Sales Order ===')
+      console.log('=== Creating Sales Order (Before Payment) ===')
       
       // Calculate delivery date (+14 days from today)
       const today = new Date()
@@ -466,8 +505,7 @@ export function CheckoutPage() {
         contact_mobile: formatPhoneForAPI(shippingDetails.phone),
         delivery_date: formattedDeliveryDate,
         items: items,
-        custom_razorpay_payment_id: paymentId,
-        custom_payment_status: paymentStatus,
+        custom_payment_status: 'Pending',
         naming_series: 'SAL-ORD-.YYYY.-'
       }
 
@@ -507,48 +545,84 @@ export function CheckoutPage() {
     }
   }
 
-  const initiateRazorpayPayment = (customerName: string, customerId: string, addressId: string) => {
-    // Prepare cart records for notes
-    const cartRecords = cartItemsWithDetails.map(item => ({
-      id: item.id,
-      title: item.title,
-      author: item.author,
-      price: item.price,
-      quantity: item.quantity,
-      total: item.price * item.quantity
-    }))
+  // Update Sales Order with payment details after successful payment
+  // This is called from the CONFIRMATION PAGE (useEffect when step === 'confirmation')
+  const updateSalesOrderWithPayment = async (
+    salesOrderId: string,
+    paymentSummary: any
+  ) => {
+    try {
+      console.log('=== Updating Sales Order with Payment Details ===')
+      console.log('Sales Order ID:', salesOrderId)
+      console.log('Payment Summary (includes full payment_session_data):', paymentSummary)
 
+      const updateData = {
+        custom_payment_status: 'Paid',  // ✅ Setting status to "Paid" on success
+        custom_payment_summary: JSON.stringify(paymentSummary)  // ✅ Storing full payment session data
+      }
+
+      console.log('Sending update data:', updateData)
+
+      const response = await fetch(`https://fox.lorempress.co/api/resource/Sales Order/${salesOrderId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token 37555e836101c2f:84dd7d46d343106',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
+
+      console.log('Update Sales Order API response status:', response.status)
+      const responseText = await response.text()
+      console.log('Update Sales Order API raw response:', responseText)
+
+      if (!response.ok) {
+        throw new Error(`Failed to update sales order: ${response.status} - ${responseText}`)
+      }
+
+      const updateResult = JSON.parse(responseText)
+      console.log('✅ Sales Order updated successfully:', updateResult)
+      console.log('✅ custom_payment_status is now: Paid')
+      console.log('✅ custom_payment_summary contains full Cashfree payment session data')
+      
+      return {
+        success: true,
+        data: updateResult
+      }
+    } catch (error) {
+      console.error('❌ Error updating sales order:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  const initiateCashfreePayment = async (
+    customerName: string, 
+    customerId: string, 
+    addressId: string
+  ) => {
     // Save current URL to prevent unwanted navigation
     const currentUrl = window.location.href
-    console.log('=== Saving current URL before Razorpay:', currentUrl)
+    console.log('=== Saving current URL before Cashfree:', currentUrl)
 
-    // Razorpay options
-    const options = {
-      key: 'rzp_live_RZt4oM6p1Ge3fb', // Razorpay live key
-      amount: total * 100, // Amount in paise (multiply by 100)
-      currency: 'INR',
-      name: 'Lorem Publishing',
-      description: 'Book Order Payment',
-      image: '/vite.svg',
-      handler: async function (response: any) {
-        console.log('=== Payment Successful ===')
-        console.log('Razorpay Payment ID:', response.razorpay_payment_id)
-        console.log('Razorpay Order ID:', response.razorpay_order_id)
-        console.log('Razorpay Signature:', response.razorpay_signature)
-        
-        // Ensure we're still on the checkout page
-        if (window.location.href !== currentUrl) {
-          console.log('=== URL changed, restoring:', currentUrl)
-          window.history.pushState(null, '', currentUrl)
-        }
-        
-        // Create Sales Order
+    try {
+      // Check if Cashfree SDK is loaded
+      if (typeof window.Cashfree === 'undefined') {
+        console.error('=== Cashfree SDK not loaded ===')
+        console.error('Please refresh the page and try again.')
+        setIsSubmitting(false)
+        return
+      }
+      console.log('✓ Cashfree SDK loaded successfully')
+
+      // Step 1: Create new Sales Order for this payment attempt
+      console.log('=== Step 1: Creating Sales Order ===')
         const salesOrderResult = await createSalesOrder(
           customerName,
           customerId,
           addressId,
-          response.razorpay_payment_id,
-          'Paid',
           {
             address: formData.address,
             landmark: formData.landmark,
@@ -560,107 +634,163 @@ export function CheckoutPage() {
           }
         )
         
-        if (salesOrderResult.success) {
-          console.log('=== Sales Order Created Successfully ===')
-          console.log('Sales Order ID:', salesOrderResult.salesOrderId)
-          
-          // Store order data for confirmation page
-          setOrderData({
-            customerName,
-            customerId,
-            addressId,
-            salesOrderId: salesOrderResult.salesOrderId,
-            paymentId: response.razorpay_payment_id,
-            deliveryDate: salesOrderResult.deliveryDate,
-            orderTotal: total,
-            orderItems: cartItemsWithDetails
-          })
-          
-          // Move to confirmation page (DON'T clear cart here to prevent redirect issues)
-          setStep('confirmation')
-          setIsSubmitting(false)
-          
-          console.log('=== Order completed successfully - moved to confirmation page ===')
-        } else {
-          console.error('=== Failed to create Sales Order ===')
-          console.error('Error:', salesOrderResult.error)
-          
-          // Still show confirmation but with limited data
-          setOrderData({
-            customerName,
-            customerId,
-            addressId,
-            paymentId: response.razorpay_payment_id,
-            orderTotal: total,
-            orderItems: cartItemsWithDetails
-          })
-          
-          setStep('confirmation')
-          setIsSubmitting(false)
-          
-          alert('Payment successful, but there was an issue creating the order. Please contact support with your payment ID: ' + response.razorpay_payment_id)
-        }
-      },
-      prefill: {
+      if (!salesOrderResult.success) {
+        console.error('Failed to create sales order:', salesOrderResult.error)
+        console.error('User can retry by clicking Place Order again')
+        setIsSubmitting(false)
+        return
+      }
+
+      const salesOrderId = salesOrderResult.salesOrderId!
+      const deliveryDate = salesOrderResult.deliveryDate!
+      console.log('✓ Sales Order created:', salesOrderId)
+
+      // Step 2: Get Payment Session from ERPNext API
+      console.log('=== Step 2: Getting Payment Session ===')
+      const paymentSessionData = {
+        order_id: salesOrderId,
+        amount: total,
         name: customerName,
-        email: formData.email,
-        contact: formatPhoneForAPI(formData.phone)
-      },
-      notes: {
-        customer_name: customerName,
-        customer_id: customerId,
-        address_id: addressId,
-        cart_items: JSON.stringify(cartRecords),
-        total_items: cartItemsWithDetails.length,
-        subtotal: subtotal,
-        shipping: shipping,
-        order_total: total
-      },
-      theme: {
-        color: '#000000'
-      },
-      modal: {
-        ondismiss: function() {
-          console.log('=== Payment Cancelled by User ===')
-          console.log('=== Current URL:', window.location.href)
+        mobile: formData.phone,
+        email: formData.email
+      }
+
+      console.log('Payment session request:', paymentSessionData)
+
+      const sessionResponse = await fetch('https://fox.lorempress.co/api/method/payment_session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(paymentSessionData)
+      })
+
+      console.log('Payment session response status:', sessionResponse.status)
+
+      if (!sessionResponse.ok) {
+        const errorText = await sessionResponse.text()
+        console.error('=== Payment Session Creation Failed ===')
+        console.error('Status:', sessionResponse.status)
+        console.error('Error Response:', errorText)
+        console.error('User can retry by clicking Place Order again')
+        setIsSubmitting(false)
+        return
+      }
+
+      const sessionResult = await sessionResponse.json()
+      console.log('Payment session created successfully:', sessionResult)
+      
+      const paymentSessionId = sessionResult.message?.payment_session_id
+      const cfOrderId = sessionResult.message?.cf_order_id
+      
+      if (!paymentSessionId) {
+        console.error('No payment_session_id in response')
+        console.error('User can retry by clicking Place Order again')
+        setIsSubmitting(false)
+        return
+      }
+
+      console.log('✓ Payment Session ID:', paymentSessionId)
+      console.log('✓ Cashfree Order ID:', cfOrderId)
+
+      // Step 3: Initialize Cashfree Drop
+      console.log('=== Step 3: Initializing Cashfree ===')
+      const cashfree = await window.Cashfree({
+        mode: 'production' // Use 'production' for live environment
+      })
+
+      console.log('=== Initiating Cashfree Payment ===')
+
+      // Step 4: Open Cashfree Drop
+      const checkoutOptions = {
+        paymentSessionId: paymentSessionId,
+        returnUrl: currentUrl,
+        redirectTarget: '_modal'
+      }
+
+      cashfree.checkout(checkoutOptions).then(async (result: any) => {
+        console.log('=== Cashfree Checkout Result ===', result)
+
+        if (result.error) {
+          console.error('=== Payment Failed ===')
+          console.error('Error:', result.error)
+          console.error('User can retry by clicking Place Order again')
           
-          // Prevent navigation by restoring URL if it changed
+          // Ensure we're still on the checkout page
           if (window.location.href !== currentUrl) {
-            console.log('=== URL changed during modal, restoring:', currentUrl)
+            console.log('=== URL changed after failure, restoring:', currentUrl)
             window.history.pushState(null, '', currentUrl)
           }
           
           setIsSubmitting(false)
-          // User can retry by clicking "Place Order" button again
-        },
-        // Prevent Razorpay from changing browser history
-        escape: true,
-        backdropclose: false,
-        confirm_close: false
-      }
-    }
+          return
+        }
 
-    const razorpayInstance = new window.Razorpay(options)
-    razorpayInstance.on('payment.failed', function (response: any) {
-      console.error('=== Payment Failed ===')
-      console.error('Error Code:', response.error.code)
-      console.error('Error Description:', response.error.description)
-      console.error('Error Source:', response.error.source)
-      console.error('Error Step:', response.error.step)
-      console.error('Error Reason:', response.error.reason)
-      
-      // Ensure we're still on the checkout page
-      if (window.location.href !== currentUrl) {
-        console.log('=== URL changed after failure, restoring:', currentUrl)
-        window.history.pushState(null, '', currentUrl)
+        if (result.redirect) {
+          console.log('=== Payment requires redirect ===')
+          // This shouldn't happen with modal mode, but handle it
+          return
+        }
+
+        // Payment completed successfully (user closed modal without error, result = {})
+        console.log('=== Payment Successful (Cashfree returned empty object) ===')
+        console.log('Empty result object indicates successful payment')
+        
+        // Ensure we're still on the checkout page
+        if (window.location.href !== currentUrl) {
+          console.log('=== URL changed, restoring:', currentUrl)
+          window.history.pushState(null, '', currentUrl)
+        }
+        
+        // Prepare payment summary with FULL payment session data + additional metadata
+        const paymentSummary = {
+          // Complete payment session response from Cashfree
+          payment_session_data: sessionResult.message,
+          
+          // Additional metadata for our records
+          sales_order_id: salesOrderId,
+          order_amount: total,
+          currency: 'INR',
+          customer_name: customerName,
+          customer_email: formData.email,
+          customer_phone: formData.phone,
+          payment_gateway: 'Cashfree',
+          payment_completed_at: new Date().toISOString(),
+          checkout_result: result // Will be {} for success, but storing for completeness
+        }
+        
+        // Store order data for confirmation page (will update order there)
+        setOrderData({
+          customerName,
+          customerId,
+          addressId,
+          salesOrderId: salesOrderId,
+          paymentId: cfOrderId,
+          deliveryDate: deliveryDate,
+          orderTotal: total,
+          orderItems: cartItemsWithDetails,
+          paymentSummary: paymentSummary
+        })
+        
+        // Move to confirmation page
+        setStep('confirmation')
+        setIsSubmitting(false)
+        
+        console.log('=== Payment successful - moving to confirmation page ===')
+        console.log('Order status will be updated on confirmation page')
+      })
+
+    } catch (error) {
+      console.error('=== Error initiating Cashfree payment ===')
+      console.error('Error type:', typeof error)
+      console.error('Error:', error)
+      if (error instanceof Error) {
+        console.error('Error message:', error.message)
+        console.error('Error stack:', error.stack)
       }
-      
-      setIsSubmitting(false)
-      // User can retry by clicking "Place Order" button again
-      alert(`Payment failed: ${response.error.description}\n\nPlease try again or use a different payment method.`)
-    })
-    
-    razorpayInstance.open()
+      console.error('User can retry by clicking Place Order again')
+          setIsSubmitting(false)
+    }
   }
 
   const handleSubmitOrder = async () => {
@@ -670,10 +800,10 @@ export function CheckoutPage() {
 
     // Check if customer and address already created (for retry scenarios)
     if (savedCustomerData) {
-      console.log('=== Using existing customer and address data ===')
+      console.log('=== Using existing customer and address data (will create new order) ===')
       console.log('Customer ID:', savedCustomerData.customerId)
       console.log('Address ID:', savedCustomerData.addressId)
-      initiateRazorpayPayment(
+      initiateCashfreePayment(
         savedCustomerData.customerName,
         savedCustomerData.customerId,
         savedCustomerData.addressId
@@ -815,11 +945,9 @@ export function CheckoutPage() {
       console.log('Address ID:', addressData.data?.name)
       addressResult = { success: true, data: addressData }
 
-      // Step 3: Both customer and address successful, initiate Razorpay payment
-      console.log('=== Initiating Razorpay Payment ===')
       const addressId = addressResult.data.data.name
       
-      // Store customer and address data for potential retries
+      // Step 3: Store customer and address data for potential retries
       setSavedCustomerData({
         customerName,
         customerId,
@@ -832,8 +960,9 @@ export function CheckoutPage() {
         address: addressResult
       })
       
-      // Initiate Razorpay payment
-      initiateRazorpayPayment(customerName, customerId, addressId)
+      // Step 4: Initiate Cashfree payment (will create new sales order)
+      console.log('=== Step 3: Initiating Cashfree Payment ===')
+      initiateCashfreePayment(customerName, customerId, addressId)
 
     } catch (error) {
       console.error('=== Unexpected error submitting order ===', error)
