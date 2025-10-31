@@ -90,8 +90,15 @@ const INDIAN_STATES = [
 ]
 
 export function CheckoutPage() {
-  // Load saved data from localStorage on mount
+  // Load saved data from localStorage on mount, or from URL hash if present
   const [step, setStep] = useState<CheckoutStep>(() => {
+    // Check URL hash first for analytics tracking
+    const hash = window.location.hash.replace('#', '') as CheckoutStep
+    const validSteps: CheckoutStep[] = ['cart', 'shipping', 'payment', 'confirmation']
+    if (hash && validSteps.includes(hash)) {
+      return hash
+    }
+    // Fall back to localStorage
     const savedStep = localStorage.getItem('loremshelf_checkout_step')
     return (savedStep as CheckoutStep) || 'cart'
   })
@@ -137,6 +144,7 @@ export function CheckoutPage() {
       phone: ''
     }
   })
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   const shipping = 0 // Free shipping for all orders
   const subtotal = cartState.total
@@ -150,6 +158,11 @@ export function CheckoutPage() {
   // Save checkout step to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('loremshelf_checkout_step', step)
+  }, [step])
+
+  // Update URL hash for analytics tracking whenever step changes
+  useEffect(() => {
+    window.location.hash = step
   }, [step])
 
   // Save customer data to localStorage whenever it changes
@@ -308,6 +321,71 @@ export function CheckoutPage() {
     }
   }
 
+  // Validate shipping form before proceeding to payment
+  const validateShippingForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Email validation
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    // Name validation
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required'
+    }
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required'
+    }
+
+    // Address validation
+    if (!formData.address.trim()) {
+      errors.address = 'Address is required'
+    }
+    if (!formData.city.trim()) {
+      errors.city = 'City is required'
+    }
+    if (!formData.state) {
+      errors.state = 'Please select a state'
+    }
+
+    // Pincode validation (6 digits)
+    if (!formData.pincode.trim()) {
+      errors.pincode = 'PIN code is required'
+    } else if (!/^\d{6}$/.test(formData.pincode)) {
+      errors.pincode = 'PIN code must be exactly 6 digits'
+    }
+
+    // Phone validation (10 digits)
+    if (!formData.phone.trim()) {
+      errors.phone = 'Phone number is required'
+    } else if (!/^\d{10}$/.test(formData.phone)) {
+      errors.phone = 'Phone number must be exactly 10 digits'
+    }
+
+    setValidationErrors(errors)
+    
+    // Scroll to first error if validation fails
+    if (Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0]
+      const element = document.querySelector(`[name="${firstErrorField}"]`) as HTMLElement
+      if (element) {
+        element.focus()
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+
+    return Object.keys(errors).length === 0
+  }
+
+  // Format phone number with +91 prefix for API submission
+  const formatPhoneForAPI = (phone: string): string => {
+    // Phone is already digits-only from input, just add +91 prefix
+    return `+91${phone}`
+  }
+
   // Create Sales Order after successful payment
   const createSalesOrder = async (
     customerName: string,
@@ -350,11 +428,11 @@ export function CheckoutPage() {
         customer_name: customerName,
         customer_address: addressId,
         shipping_address_name: addressId,
-        address_display: `${shippingDetails.address}\n${shippingDetails.landmark ? shippingDetails.landmark + '\n' : ''}${shippingDetails.city}, ${shippingDetails.state} - ${shippingDetails.pincode}\nPhone: ${shippingDetails.phone}\nEmail: ${shippingDetails.email}`,
-        shipping_address: `${shippingDetails.address}\n${shippingDetails.landmark ? shippingDetails.landmark + '\n' : ''}${shippingDetails.city}, ${shippingDetails.state} - ${shippingDetails.pincode}\nPhone: ${shippingDetails.phone}\nEmail: ${shippingDetails.email}`,
-        contact_display: `${customerName}\n${shippingDetails.phone}\n${shippingDetails.email}`,
+        address_display: `${shippingDetails.address}\n${shippingDetails.landmark ? shippingDetails.landmark + '\n' : ''}${shippingDetails.city}, ${shippingDetails.state} - ${shippingDetails.pincode}\nPhone: ${formatPhoneForAPI(shippingDetails.phone)}\nEmail: ${shippingDetails.email}`,
+        shipping_address: `${shippingDetails.address}\n${shippingDetails.landmark ? shippingDetails.landmark + '\n' : ''}${shippingDetails.city}, ${shippingDetails.state} - ${shippingDetails.pincode}\nPhone: ${formatPhoneForAPI(shippingDetails.phone)}\nEmail: ${shippingDetails.email}`,
+        contact_display: `${customerName}\n${formatPhoneForAPI(shippingDetails.phone)}\n${shippingDetails.email}`,
         contact_email: shippingDetails.email,
-        contact_mobile: shippingDetails.phone,
+        contact_mobile: formatPhoneForAPI(shippingDetails.phone),
         delivery_date: formattedDeliveryDate,
         items: items,
         custom_razorpay_payment_id: paymentId,
@@ -495,7 +573,7 @@ export function CheckoutPage() {
       prefill: {
         name: customerName,
         email: formData.email,
-        contact: formData.phone
+        contact: formatPhoneForAPI(formData.phone)
       },
       notes: {
         customer_name: customerName,
@@ -578,12 +656,14 @@ export function CheckoutPage() {
     try {
       // Step 1: Create Customer
       const customerName = `${formData.firstName} ${formData.lastName}`
+      const formattedPhone = formatPhoneForAPI(formData.phone)
+      
       console.log('Creating customer with data:', {
         customer_name: customerName,
         customer_type: 'Individual',
         customer_group: 'All Customer Groups',
         territory: 'All Territories',
-        mobile_no: formData.phone,
+        mobile_no: formattedPhone,
         email_id: formData.email
       })
 
@@ -598,7 +678,7 @@ export function CheckoutPage() {
           customer_type: 'Individual',
           customer_group: 'All Customer Groups',
           territory: 'All Territories',
-          mobile_no: formData.phone,
+          mobile_no: formattedPhone,
           email_id: formData.email
         })
       })
@@ -650,7 +730,7 @@ export function CheckoutPage() {
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
-        phone: formData.phone,
+        phone: formattedPhone,
         email_id: formData.email,
         links: [{ link_doctype: 'Customer', link_name: customerId }]
       })
@@ -669,7 +749,7 @@ export function CheckoutPage() {
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
-          phone: formData.phone,
+          phone: formattedPhone,
           email_id: formData.email,
           links: [
             {
@@ -961,11 +1041,11 @@ export function CheckoutPage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Truck className="size-4 text-blue-600" />
-            <span>Ships from Kochi within 2-3 business days</span>
+            <span>Ships from Kochi in 2-5 business days</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <CheckCircle className="size-4 text-green-600" />
-            <span>30-day return policy</span>
+            <span>14 day replacement policy</span>
           </div>
         </div>
       </CardContent>
@@ -1162,11 +1242,23 @@ export function CheckoutPage() {
                     </label>
                     <Input
                       type="email"
+                      name="email"
                       required
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value })
+                        // Clear error when user starts typing
+                        if (validationErrors.email) {
+                          setValidationErrors({ ...validationErrors, email: '' })
+                        }
+                      }}
                       placeholder="your@email.com"
+                      maxLength={60}
+                      className={validationErrors.email ? 'border-red-500' : ''}
                     />
+                    {validationErrors.email && (
+                      <p className="text-red-600 text-xs mt-1">{validationErrors.email}</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1176,10 +1268,21 @@ export function CheckoutPage() {
                       </label>
                       <Input
                         type="text"
+                        name="firstName"
                         required
                         value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, firstName: e.target.value })
+                          if (validationErrors.firstName) {
+                            setValidationErrors({ ...validationErrors, firstName: '' })
+                          }
+                        }}
+                        maxLength={60}
+                        className={validationErrors.firstName ? 'border-red-500' : ''}
                       />
+                      {validationErrors.firstName && (
+                        <p className="text-red-600 text-xs mt-1">{validationErrors.firstName}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block font-sans font-semibold text-sm text-black mb-2">
@@ -1187,10 +1290,21 @@ export function CheckoutPage() {
                       </label>
                       <Input
                         type="text"
+                        name="lastName"
                         required
                         value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, lastName: e.target.value })
+                          if (validationErrors.lastName) {
+                            setValidationErrors({ ...validationErrors, lastName: '' })
+                          }
+                        }}
+                        maxLength={60}
+                        className={validationErrors.lastName ? 'border-red-500' : ''}
                       />
+                      {validationErrors.lastName && (
+                        <p className="text-red-600 text-xs mt-1">{validationErrors.lastName}</p>
+                      )}
                     </div>
                   </div>
 
@@ -1200,11 +1314,22 @@ export function CheckoutPage() {
                     </label>
                     <Input
                       type="text"
+                      name="address"
                       required
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, address: e.target.value })
+                        if (validationErrors.address) {
+                          setValidationErrors({ ...validationErrors, address: '' })
+                        }
+                      }}
                       placeholder="Street address, building, apartment"
+                      maxLength={60}
+                      className={validationErrors.address ? 'border-red-500' : ''}
                     />
+                    {validationErrors.address && (
+                      <p className="text-red-600 text-xs mt-1">{validationErrors.address}</p>
+                    )}
                   </div>
 
                   <div>
@@ -1216,6 +1341,7 @@ export function CheckoutPage() {
                       value={formData.landmark}
                       onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
                       placeholder="Nearby landmark (optional)"
+                      maxLength={60}
                     />
                   </div>
 
@@ -1226,21 +1352,38 @@ export function CheckoutPage() {
                       </label>
                       <Input
                         type="text"
+                        name="city"
                         required
                         value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, city: e.target.value })
+                          if (validationErrors.city) {
+                            setValidationErrors({ ...validationErrors, city: '' })
+                          }
+                        }}
+                        maxLength={60}
+                        className={validationErrors.city ? 'border-red-500' : ''}
                       />
+                      {validationErrors.city && (
+                        <p className="text-red-600 text-xs mt-1">{validationErrors.city}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block font-sans font-semibold text-sm text-black mb-2">
                         State *
                       </label>
                       <Select
+                        name="state"
                         value={formData.state}
-                        onValueChange={(value) => setFormData({ ...formData, state: value })}
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, state: value })
+                          if (validationErrors.state) {
+                            setValidationErrors({ ...validationErrors, state: '' })
+                          }
+                        }}
                         required
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={validationErrors.state ? 'border-red-500' : ''}>
                           <SelectValue placeholder="Select state" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1251,6 +1394,9 @@ export function CheckoutPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {validationErrors.state && (
+                        <p className="text-red-600 text-xs mt-1">{validationErrors.state}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block font-sans font-semibold text-sm text-black mb-2">
@@ -1258,15 +1404,28 @@ export function CheckoutPage() {
                       </label>
                       <Input
                         type="text"
+                        name="pincode"
                         required
                         value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                        onChange={(e) => {
+                          // Only allow digits and max 6 characters
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                          setFormData({ ...formData, pincode: value })
+                          if (validationErrors.pincode) {
+                            setValidationErrors({ ...validationErrors, pincode: '' })
+                          }
+                        }}
                         placeholder="e.g., 682001"
                         maxLength={6}
+                        className={validationErrors.pincode ? 'border-red-500' : ''}
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Enter a 6-digit PIN code that matches your selected state
-                      </p>
+                      {validationErrors.pincode ? (
+                        <p className="text-red-600 text-xs mt-1">{validationErrors.pincode}</p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Enter a 6-digit PIN code that matches your selected state
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1276,11 +1435,28 @@ export function CheckoutPage() {
                     </label>
                     <Input
                       type="tel"
+                      name="phone"
                       required
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 XXXXX XXXXX"
+                      onChange={(e) => {
+                        // Only allow digits, max 10 characters
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                        setFormData({ ...formData, phone: value })
+                        if (validationErrors.phone) {
+                          setValidationErrors({ ...validationErrors, phone: '' })
+                        }
+                      }}
+                      placeholder="10-digit mobile number"
+                      maxLength={10}
+                      className={validationErrors.phone ? 'border-red-500' : ''}
                     />
+                    {validationErrors.phone ? (
+                      <p className="text-red-600 text-xs mt-1">{validationErrors.phone}</p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Enter 10-digit mobile number (without +91)
+                      </p>
+                    )}
                   </div>
 
                   {/* Desktop: Buttons at bottom of left column */}
@@ -1292,8 +1468,10 @@ export function CheckoutPage() {
                       Back to Cart
                     </Button>
                     <Button type="button" onClick={() => {
-                      setStep('payment')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      if (validateShippingForm()) {
+                        setStep('payment')
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }
                     }}>
                       Continue to Payment
                       <ArrowRight className="ml-2 size-4" />
@@ -1315,7 +1493,7 @@ export function CheckoutPage() {
                             Free Shipping 🎉
                           </h3>
                           <p className="font-sans text-sm text-green-800">
-                            Enjoy free shipping on all orders! Standard delivery within 5-7 business days.
+                            Enjoy free shipping on all orders! Delivery within 5 - 14 days.
                           </p>
                         </div>
                       </div>
@@ -1328,8 +1506,10 @@ export function CheckoutPage() {
             {/* Mobile: Buttons below Order Summary */}
             <div className="flex lg:hidden flex-col gap-4 pt-6">
               <Button type="button" size="lg" onClick={() => {
-                setStep('payment')
-                window.scrollTo({ top: 0, behavior: 'smooth' })
+                if (validateShippingForm()) {
+                  setStep('payment')
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }
               }}>
                 Continue to Payment
                 <ArrowRight className="ml-2 size-4" />

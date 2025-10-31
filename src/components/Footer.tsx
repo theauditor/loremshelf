@@ -89,60 +89,13 @@ export function Footer() {
             </div>
 
             {/* Footer Links */}
-            <div className="lg:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="lg:col-span-4 flex gap-16">
               <div>
                 <h3 className="font-sans font-semibold text-[14px] text-white mb-6">
                   Explore
                 </h3>
                 <ul className="space-y-4">
                   {footerLinks.explore.map((link) => (
-                    <li key={link.name}>
-                      <Link
-                        to={link.href}
-                        className="font-sans font-medium text-[14px] text-gray-300 hover:text-white transition-colors"
-                      >
-                        {link.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-sans font-semibold text-[14px] text-white mb-6">
-                  Authors
-                </h3>
-                <ul className="space-y-4">
-                  {footerLinks.authors.map((link) => (
-                    <li key={link.name}>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={link.href}
-                          className={`font-sans font-medium text-[14px] transition-colors ${
-                            link.comingSoon
-                              ? 'text-gray-400 cursor-not-allowed'
-                              : 'text-gray-300 hover:text-white'
-                          }`}
-                        >
-                          {link.name}
-                        </Link>
-                        {link.comingSoon && (
-                          <Badge variant="outline" className="text-xs text-white border-white">
-                            Coming Soon
-                          </Badge>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-sans font-semibold text-[14px] text-white mb-6">
-                  Company
-                </h3>
-                <ul className="space-y-4">
-                  {footerLinks.company.map((link) => (
                     <li key={link.name}>
                       <Link
                         to={link.href}
@@ -172,6 +125,57 @@ export function Footer() {
                   ))}
                 </ul>
               </div>
+
+              {/* Authors section - hidden
+              <div>
+                <h3 className="font-sans font-semibold text-[14px] text-white mb-6">
+                  Authors
+                </h3>
+                <ul className="space-y-4">
+                  {footerLinks.authors.map((link) => (
+                    <li key={link.name}>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={link.href}
+                          className={`font-sans font-medium text-[14px] transition-colors ${
+                            link.comingSoon
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-gray-300 hover:text-white'
+                          }`}
+                        >
+                          {link.name}
+                        </Link>
+                        {link.comingSoon && (
+                          <Badge variant="outline" className="text-xs text-white border-white">
+                            Coming Soon
+                          </Badge>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              */}
+
+              {/* Company section - hidden
+              <div>
+                <h3 className="font-sans font-semibold text-[14px] text-white mb-6">
+                  Company
+                </h3>
+                <ul className="space-y-4">
+                  {footerLinks.company.map((link) => (
+                    <li key={link.name}>
+                      <Link
+                        to={link.href}
+                        className="font-sans font-medium text-[14px] text-gray-300 hover:text-white transition-colors"
+                      >
+                        {link.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              */}
             </div>
           </div>
 

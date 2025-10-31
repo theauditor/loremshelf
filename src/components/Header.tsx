@@ -33,7 +33,7 @@ export function Header() {
             to="/"
             className="flex items-center hover:opacity-80 transition-opacity"
           >
-            <div className="h-[27px] md:h-[34px]">
+            <div className="h-[23px] md:h-[29px]">
               <img src="/Black.svg" alt="Lorem" className="block h-full w-auto" />
             </div>
           </Link>
